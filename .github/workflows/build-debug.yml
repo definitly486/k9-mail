@@ -1,0 +1,52 @@
+name: Build Debug APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & publish debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: ./gradlew :app-k9mail:assembleFossDebug --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          find app-k9mail/build/outputs/apk -name '*.apk' -path '*foss*' -path '*ebug*' -exec cp {} out/ \;
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: k9mail-debug-apk
+          path: out/*.apk
+
+      - name: Publish GitHub pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="debug-${{ github.run_number }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          gh release create "$TAG" out/*.apk \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Debug build #${{ github.run_number }} ($SHORT_SHA)" \
+            --notes "Debug build from commit $GITHUB_SHA (branch ${GITHUB_REF_NAME})"

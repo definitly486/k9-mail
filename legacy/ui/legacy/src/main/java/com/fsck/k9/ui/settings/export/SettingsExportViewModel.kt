@@ -134,7 +134,12 @@ class SettingsExportViewModel(
             try {
                 val elapsed = measureRealtimeMillis {
                     withContext(Dispatchers.IO) {
-                        settingsExporter.exportToUri(includeGeneralSettings, selectedAccounts, contentUri)
+                        settingsExporter.exportToUri(
+                            includeGeneralSettings,
+                            selectedAccounts,
+                            contentUri,
+                            includePasswords = true,
+                        )
                     }
                 }
 

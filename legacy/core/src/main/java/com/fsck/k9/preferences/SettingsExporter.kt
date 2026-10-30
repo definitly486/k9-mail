@@ -30,10 +30,15 @@ class SettingsExporter(
     private val filePrefixProvider: FilePrefixProvider,
 ) {
     @Throws(SettingsImportExportException::class)
-    fun exportToUri(includeGlobals: Boolean, accountUuids: Set<String>, uri: Uri) {
+    fun exportToUri(
+        includeGlobals: Boolean,
+        accountUuids: Set<String>,
+        uri: Uri,
+        includePasswords: Boolean = false,
+    ) {
         try {
             contentResolver.openOutputStream(uri, "wt")!!.use { outputStream ->
-                exportPreferences(outputStream, includeGlobals, accountUuids, includePasswords = false)
+                exportPreferences(outputStream, includeGlobals, accountUuids, includePasswords)
             }
         } catch (e: Exception) {
             throw SettingsImportExportException(e)

@@ -1,0 +1,82 @@
+name: Build Release APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, sign & publish release APK
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check signing secrets
+        run: |
+          for v in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret $v is not set (Settings -> Secrets and variables -> Actions)"
+              exit 1
+            fi
+          done
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare keystore
+        run: |
+          mkdir -p .signing
+          echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/.signing/release.jks"
+          cat > .signing/k9.release.signing.properties <<PROPS
+          k9.release.storeFile=$GITHUB_WORKSPACE/.signing/release.jks
+          k9.release.storePassword=$KEYSTORE_PASSWORD
+          k9.release.keyAlias=$KEY_ALIAS
+          k9.release.keyPassword=$KEY_PASSWORD
+          PROPS
+          sed -i 's/^ *//' .signing/k9.release.signing.properties
+
+      - name: Build release APK
+        run: ./gradlew :app-k9mail:assembleFossRelease --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          find app-k9mail/build/outputs/apk -name '*.apk' -path '*foss*' -path '*elease*' -exec cp {} out/ \;
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: k9mail-release-apk
+          path: out/*.apk
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="release-${{ github.run_number }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          gh release create "$TAG" out/*.apk \
+            --target "$GITHUB_SHA" \
+            --latest \
+            --title "Release build #${{ github.run_number }} ($SHORT_SHA)" \
+            --notes "Signed release build from commit $GITHUB_SHA (branch ${GITHUB_REF_NAME})"
+
+      - name: Cleanup keystore
+        if: always()
+        run: rm -rf .signing
