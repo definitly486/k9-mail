@@ -40,6 +40,7 @@ private const val LOGO_SIZE_DP = 125
 internal fun WelcomeContent(
     onStartClick: () -> Unit,
     onImportClick: () -> Unit,
+    onDownloadSettingsClick: () -> Unit,
     appName: String,
     showImportButton: Boolean,
     modifier: Modifier = Modifier,
@@ -60,6 +61,7 @@ internal fun WelcomeContent(
                         showImportButton = showImportButton,
                         onStartClick = onStartClick,
                         onImportClick = onImportClick,
+                        onDownloadSettingsClick = onDownloadSettingsClick,
                     )
                 },
                 content = {
@@ -179,6 +181,7 @@ private fun WelcomeFooterSection(
     showImportButton: Boolean,
     onStartClick: () -> Unit,
     onImportClick: () -> Unit,
+    onDownloadSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -190,6 +193,7 @@ private fun WelcomeFooterSection(
             showImportButton = showImportButton,
             onStartClick = onStartClick,
             onImportClick = onImportClick,
+            onDownloadSettingsClick = onDownloadSettingsClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = MainTheme.spacings.quadruple),
@@ -202,6 +206,7 @@ private fun WelcomeFooter(
     showImportButton: Boolean,
     onStartClick: () -> Unit,
     onImportClick: () -> Unit,
+    onDownloadSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -220,6 +225,10 @@ private fun WelcomeFooter(
                 onClick = onImportClick,
             )
         }
+        ButtonText(
+            text = stringResource(id = R.string.onboarding_welcome_download_settings_button),
+            onClick = onDownloadSettingsClick,
+        )
 
         TextBodySmall(
             text = stringResource(R.string.onboarding_welcome_developed_by),

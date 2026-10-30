@@ -8,12 +8,14 @@ import net.thunderbird.core.common.provider.AppNameProvider
 fun WelcomeScreen(
     onStartClick: () -> Unit,
     onImportClick: () -> Unit,
+    onDownloadSettingsClick: () -> Unit,
     appNameProvider: AppNameProvider,
     onboardingMigrationManager: OnboardingMigrationManager,
 ) {
     WelcomeContent(
         onStartClick = onStartClick,
         onImportClick = onImportClick,
+        onDownloadSettingsClick = onDownloadSettingsClick,
         appName = appNameProvider.appName,
         showImportButton = !onboardingMigrationManager.isFeatureIncluded(),
     )

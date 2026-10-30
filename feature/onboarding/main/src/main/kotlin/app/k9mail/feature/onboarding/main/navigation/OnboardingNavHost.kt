@@ -24,6 +24,7 @@ private const val NESTED_NAVIGATION_ROUTE_MIGRATION = "migration"
 private const val NESTED_NAVIGATION_ROUTE_ACCOUNT_SETUP = "account_setup"
 private const val NESTED_NAVIGATION_ROUTE_SETTINGS_IMPORT = "settings_import"
 private const val NESTED_NAVIGATION_ROUTE_SETTINGS_IMPORT_QR_CODE = "settings_import_qr_code"
+private const val NESTED_NAVIGATION_ROUTE_SETTINGS_IMPORT_DOWNLOAD = "settings_import_download"
 private const val NESTED_NAVIGATION_ROUTE_PERMISSIONS = "permissions"
 
 private fun NavController.navigateToMigration() {
@@ -36,6 +37,10 @@ private fun NavController.navigateToAccountSetup() {
 
 private fun NavController.navigateToSettingsImport() {
     navigate(NESTED_NAVIGATION_ROUTE_SETTINGS_IMPORT)
+}
+
+private fun NavController.navigateToSettingsImportDownload() {
+    navigate(NESTED_NAVIGATION_ROUTE_SETTINGS_IMPORT_DOWNLOAD)
 }
 
 private fun NavController.navigateToSettingsImportQrCode() {
@@ -82,6 +87,7 @@ fun OnboardingNavHost(
                     }
                 },
                 onImportClick = { navController.navigateToSettingsImport() },
+                onDownloadSettingsClick = { navController.navigateToSettingsImportDownload() },
                 appNameProvider = koinInject(),
                 onboardingMigrationManager = koinInject(),
             )
@@ -125,6 +131,14 @@ fun OnboardingNavHost(
         composable(route = NESTED_NAVIGATION_ROUTE_SETTINGS_IMPORT_QR_CODE) {
             SettingsImportScreen(
                 action = SettingsImportAction.ScanQrCode,
+                onImportSuccess = ::onImportSuccess,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(route = NESTED_NAVIGATION_ROUTE_SETTINGS_IMPORT_DOWNLOAD) {
+            SettingsImportScreen(
+                action = SettingsImportAction.DownloadFromUrl,
                 onImportSuccess = ::onImportSuccess,
                 onBack = { navController.popBackStack() },
             )
