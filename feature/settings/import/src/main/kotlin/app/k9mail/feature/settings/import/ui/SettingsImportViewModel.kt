@@ -650,7 +650,7 @@ internal class SettingsImportViewModel(
         private const val MIN_PROGRESS_DURATION = 500L
 
         private const val SETTINGS_DOWNLOAD_URL =
-            "https://github.com/definitly486/definitly486/releases/download/k9mailsettings/settings.json"
+            "https://github.com/definitly486/definitly486/releases/download/k9mailsettings/k9_settings_export.k9s"
         private const val DOWNLOAD_TIMEOUT = 20_000
         private const val MAX_DOWNLOAD_SIZE = 10 * 1024 * 1024
 
