@@ -26,8 +26,10 @@ import net.thunderbird.core.logging.legacy.Log
 import net.thunderbird.core.logging.testing.TestLogger
 import org.junit.Before
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.stub
 import org.robolectric.RobolectricTestRunner
@@ -165,7 +167,7 @@ class SettingsImportViewModelTest {
             on { openInputStream("content://net.thunderbird.android.settings/".toUri()) } doReturn inputStream
         }
         settingsImporter.stub {
-            on { getImportStreamContents(inputStream) } doReturn ImportContents(
+            on { getImportStreamContents(any()) } doReturn ImportContents(
                 globalSettings = false,
                 accounts = listOf(
                     AccountDescription(name = "Account 1", uuid = "uuid-1"),
@@ -209,7 +211,7 @@ class SettingsImportViewModelTest {
             on { openInputStream("content://net.thunderbird.android.settings/".toUri()) } doReturn inputStream
         }
         settingsImporter.stub {
-            on { getImportStreamContents(inputStream) } doThrow SettingsImportExportException()
+            on { getImportStreamContents(any()) } doThrow SettingsImportExportException()
         }
 
         // Read settings data from content provider
@@ -243,7 +245,7 @@ class SettingsImportViewModelTest {
         val accountOne = AccountDescription(name = "Account 1", uuid = "uuid-1")
         val accountTwo = AccountDescription(name = "Account 2", uuid = "uuid-2")
         settingsImporter.stub {
-            on { getImportStreamContents(inputStream) } doReturn ImportContents(
+            on { getImportStreamContents(any()) } doReturn ImportContents(
                 globalSettings = false,
                 accounts = listOf(
                     accountOne,
@@ -266,7 +268,7 @@ class SettingsImportViewModelTest {
         assertThat(uiModelLiveData.value!!.statusText).isEqualTo(StatusText.IMPORTING_PROGRESS)
 
         settingsImporter.stub {
-            onBlocking { importSettings(inputStream, false, listOf("uuid-1")) } doReturn ImportResults(
+            onBlocking { importSettings(any(), eq(false), eq(listOf("uuid-1"))) } doReturn ImportResults(
                 globalSettings = false,
                 importedAccounts = listOf(
                     AccountDescriptionPair(

@@ -123,6 +123,12 @@ class SettingsListFragment : Fragment(), ItemTouchCallback {
                     navigationAction = R.id.action_settingsListScreen_to_settingsImportScreen,
                     icon = Icons.Outlined.Download,
                 )
+
+                addAction(
+                    text = getString(SettingsImportR.string.settings_import_download_title),
+                    navigationAction = R.id.action_settingsListScreen_to_settingsImportDownloadScreen,
+                    icon = Icons.Outlined.Download,
+                )
             }
 
             addSection(title = getString(R.string.settings_list_miscellaneous_category)) {

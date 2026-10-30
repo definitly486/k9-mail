@@ -1,11 +1,15 @@
 package com.fsck.k9.ui.settings.export
 
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.text.InputType
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.activity.result.ActivityResultLauncher
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -13,10 +17,13 @@ import androidx.recyclerview.widget.RecyclerView
 import app.k9mail.core.android.common.activity.CreateDocumentResultContract
 import com.fsck.k9.ui.R
 import com.fsck.k9.ui.base.livedata.observeNotNull
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textview.MaterialTextView
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
 import org.koin.androidx.viewmodel.ext.android.viewModel
+
+private const val MIN_PASSPHRASE_LENGTH = 6
 
 class SettingsExportFragment : Fragment() {
     private val viewModel: SettingsExportViewModel by viewModel()
@@ -131,8 +138,56 @@ class SettingsExportFragment : Fragment() {
         settingsExportList.isEnabled = enable
     }
 
+    private fun askPassphrase() {
+        val context = requireContext()
+        val padding = (resources.displayMetrics.density * 24).toInt()
+
+        fun passwordField(hintRes: Int) = EditText(context).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setHint(hintRes)
+        }
+
+        val passphraseField = passwordField(R.string.settings_export_passphrase_hint)
+        val confirmField = passwordField(R.string.settings_export_passphrase_confirm_hint)
+        val layout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding / 2, padding, 0)
+            addView(passphraseField)
+            addView(confirmField)
+        }
+
+        val dialog = MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.settings_export_passphrase_title)
+            .setMessage(R.string.settings_export_passphrase_message)
+            .setView(layout)
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val passphrase = passphraseField.text.toString()
+                when {
+                    passphrase.length < MIN_PASSPHRASE_LENGTH -> {
+                        passphraseField.error = getString(R.string.settings_export_passphrase_too_short)
+                    }
+                    passphrase != confirmField.text.toString() -> {
+                        confirmField.error = getString(R.string.settings_export_passphrase_mismatch)
+                    }
+                    else -> {
+                        dialog.dismiss()
+                        viewModel.onPassphraseEntered(passphrase)
+                    }
+                }
+            }
+        }
+
+        dialog.show()
+    }
+
     private fun handleActionEvents(action: Action) {
         when (action) {
+            is Action.AskPassphrase -> askPassphrase()
             is Action.PickDocument -> pickDocument(action.fileNameSuggestion, action.mimeType)
             is Action.ShareDocument -> shareDocument(action.contentUri, action.mimeType)
         }

@@ -38,6 +38,17 @@
             android:id="@+id/action_settingsListScreen_to_settingsImportScreen"
             app:destination="@id/settingsImportScreen"
             />
+
+        <action
+            android:id="@+id/action_settingsListScreen_to_settingsImportDownloadScreen"
+            app:destination="@id/settingsImportScreen"
+            >
+            <argument
+                android:name="action"
+                android:defaultValue="download_url"
+                app:argType="string"
+                />
+        </action>
     </fragment>
 
     <fragment

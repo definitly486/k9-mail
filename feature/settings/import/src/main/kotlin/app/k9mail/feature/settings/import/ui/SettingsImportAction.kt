@@ -6,6 +6,7 @@ import androidx.core.os.bundleOf
 enum class SettingsImportAction(private val bundleValue: String) {
     Overview("overview"),
     ScanQrCode("scan_qr_code"),
+    DownloadFromUrl("download_url"),
     ;
 
     fun toBundle(): Bundle {

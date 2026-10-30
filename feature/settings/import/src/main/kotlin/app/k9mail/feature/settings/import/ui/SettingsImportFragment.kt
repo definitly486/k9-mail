@@ -6,7 +6,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.text.InputType
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.LinearLayout
 import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.os.bundleOf
@@ -22,6 +25,7 @@ import app.k9mail.feature.migration.launcher.api.MigrationManager
 import app.k9mail.feature.settings.importing.R
 import com.fsck.k9.ui.base.livedata.observeNotNull
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textview.MaterialTextView
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
@@ -209,6 +213,7 @@ class SettingsImportFragment : Fragment() {
             is Action.PickDocument -> pickDocument()
             is Action.ScanQrCode -> scanQrCode()
             is Action.PickApp -> pickApp()
+            is Action.FilePassphrasePrompt -> askFilePassphrase(action)
             is Action.PasswordPrompt -> showPasswordPrompt(action)
             is Action.StartAuthorization -> startAuthorization(action)
         }
@@ -231,6 +236,39 @@ class SettingsImportFragment : Fragment() {
 
     private fun scanQrCode() {
         qrCodeScannerLauncher.launch(Unit)
+    }
+
+    private fun askFilePassphrase(action: Action.FilePassphrasePrompt) {
+        val context = requireContext()
+        val padding = (resources.displayMetrics.density * 24).toInt()
+
+        val field = EditText(context).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setHint(R.string.settings_import_passphrase_hint)
+        }
+        val layout = LinearLayout(context).apply {
+            setPadding(padding, padding / 2, padding, 0)
+            addView(field, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+
+        val message = if (action.isRetry) {
+            R.string.settings_import_passphrase_wrong
+        } else {
+            R.string.settings_import_passphrase_message
+        }
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.settings_import_passphrase_title)
+            .setMessage(message)
+            .setView(layout)
+            .setCancelable(false)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                viewModel.onFilePassphraseEntered(field.text.toString())
+            }
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                viewModel.onFilePassphraseCanceled()
+            }
+            .show()
     }
 
     private fun pickApp() {

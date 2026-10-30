@@ -757,6 +757,12 @@
     <string name="settings_export_progress_text">Exporting settings…</string>
     <string name="settings_export_success_generic">Settings successfully exported</string>
     <string name="settings_export_failure">Failed to export settings</string>
+    <string name="settings_export_passphrase_title">Encrypt settings file</string>
+    <string name="settings_export_passphrase_message">The file contains account passwords and will be encrypted with this passphrase. You will need it to import the file. It cannot be recovered.</string>
+    <string name="settings_export_passphrase_hint">Passphrase</string>
+    <string name="settings_export_passphrase_confirm_hint">Repeat passphrase</string>
+    <string name="settings_export_passphrase_too_short">Use at least 6 characters</string>
+    <string name="settings_export_passphrase_mismatch">Passphrases do not match</string>
 
 
     <string name="webview_empty_message">No text</string>

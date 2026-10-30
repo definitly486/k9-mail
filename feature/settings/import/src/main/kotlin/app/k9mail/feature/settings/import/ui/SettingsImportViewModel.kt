@@ -16,9 +16,16 @@ import com.fsck.k9.helper.SingleLiveEvent
 import com.fsck.k9.helper.measureRealtimeMillisWithResult
 import com.fsck.k9.preferences.ImportContents
 import com.fsck.k9.preferences.ImportResults
+import com.fsck.k9.preferences.SettingsCrypto
+import com.fsck.k9.preferences.SettingsDecryptionException
 import com.fsck.k9.preferences.SettingsImporter
+import com.fsck.k9.preferences.SettingsPassphraseRequiredException
 import com.fsck.k9.ui.base.bundle.getEnum
 import com.fsck.k9.ui.base.bundle.putEnum
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +60,8 @@ internal class SettingsImportViewModel(
     private var accountsMap: MutableMap<AccountNumber, AccountUuid> = mutableMapOf()
     private val accountStateMap: MutableMap<AccountNumber, AccountState> = mutableMapOf()
     private var contentUri: Uri? = null
+    private var filePassphrase: String? = null
+    private var downloadedBytes: ByteArray? = null
     private var currentlyAuthorizingAccountUuid: String? = null
 
     private val containsGeneralSettings: Boolean
@@ -224,6 +233,7 @@ internal class SettingsImportViewModel(
             when (action) {
                 SettingsImportAction.Overview -> Unit
                 SettingsImportAction.ScanQrCode -> onScanQrCodeButtonClicked()
+                SettingsImportAction.DownloadFromUrl -> onDownloadFromUrlClicked()
             }
         }
     }
@@ -263,6 +273,9 @@ internal class SettingsImportViewModel(
     }
 
     fun onDocumentPicked(contentUri: Uri) {
+        downloadedBytes = null
+        filePassphrase = null
+
         updateUiModel {
             showLoadingProgress()
         }
@@ -355,6 +368,73 @@ internal class SettingsImportViewModel(
         }
     }
 
+    fun onDownloadFromUrlClicked() {
+        downloadedBytes = null
+        filePassphrase = null
+
+        updateUiModel {
+            showLoadingProgress()
+        }
+
+        viewModelScope.launch {
+            try {
+                val bytes = withContext(backgroundDispatcher) { downloadSettingsFile() }
+                downloadedBytes = bytes
+
+                startReadSettingsFile(Uri.parse(SETTINGS_DOWNLOAD_URL))
+            } catch (e: Exception) {
+                Log.e(e, "Error downloading settings file")
+
+                updateUiModel {
+                    showReadFailureText()
+                }
+            }
+        }
+    }
+
+    fun onFilePassphraseEntered(passphrase: String) {
+        filePassphrase = passphrase
+
+        val contentUri = this.contentUri ?: return
+        startReadSettingsFile(contentUri)
+    }
+
+    fun onFilePassphraseCanceled() {
+        downloadedBytes = null
+        filePassphrase = null
+
+        updateUiModel {
+            showReadFailureText()
+        }
+    }
+
+    private fun downloadSettingsFile(): ByteArray {
+        val connection = URL(SETTINGS_DOWNLOAD_URL).openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = DOWNLOAD_TIMEOUT
+            connection.readTimeout = DOWNLOAD_TIMEOUT
+            connection.instanceFollowRedirects = true
+
+            check(connection.responseCode == HttpURLConnection.HTTP_OK) {
+                "Unexpected HTTP response code: ${connection.responseCode}"
+            }
+
+            val bytes = connection.inputStream.use { it.readBytes() }
+            check(bytes.size <= MAX_DOWNLOAD_SIZE) { "Settings file is too large" }
+
+            return bytes
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun openSettingsStream(contentUri: Uri): InputStream {
+        downloadedBytes?.let { return ByteArrayInputStream(it) }
+
+        return contentResolver.openInputStream(contentUri)
+            ?: error("Failed to open settings file for reading: $contentUri")
+    }
+
     private fun startReadSettingsFile(contentUri: Uri) {
         this.contentUri = contentUri
 
@@ -386,6 +466,10 @@ internal class SettingsImportViewModel(
                 updateUiModel {
                     initializeSettingsList(items)
                 }
+            } catch (e: SettingsPassphraseRequiredException) {
+                sendActionEvent(Action.FilePassphrasePrompt(isRetry = false))
+            } catch (e: SettingsDecryptionException) {
+                sendActionEvent(Action.FilePassphrasePrompt(isRetry = true))
             } catch (e: Exception) {
                 Log.e(e, "Error reading settings file")
 
@@ -482,11 +566,10 @@ internal class SettingsImportViewModel(
     }
 
     private fun readSettings(contentUri: Uri): ImportContents {
-        val inputStream = contentResolver.openInputStream(contentUri)
-            ?: error("Failed to open settings file for reading: $contentUri")
+        val inputStream = openSettingsStream(contentUri)
 
         return inputStream.use {
-            settingsImporter.getImportStreamContents(inputStream)
+            settingsImporter.getImportStreamContents(SettingsCrypto.prepareForImport(inputStream, filePassphrase))
         }
     }
 
@@ -495,11 +578,14 @@ internal class SettingsImportViewModel(
         generalSettings: Boolean,
         accounts: List<AccountUuid>,
     ): ImportResults {
-        val inputStream = contentResolver.openInputStream(contentUri)
-            ?: error("Failed to open settings file for reading: $contentUri")
+        val inputStream = openSettingsStream(contentUri)
 
         return inputStream.use {
-            settingsImporter.importSettings(inputStream, generalSettings, accounts)
+            settingsImporter.importSettings(
+                SettingsCrypto.prepareForImport(inputStream, filePassphrase),
+                generalSettings,
+                accounts,
+            )
         }
     }
 
@@ -563,6 +649,11 @@ internal class SettingsImportViewModel(
     companion object {
         private const val MIN_PROGRESS_DURATION = 500L
 
+        private const val SETTINGS_DOWNLOAD_URL =
+            "https://github.com/definitly486/definitly486/releases/download/k9mailsettings/settings.json"
+        private const val DOWNLOAD_TIMEOUT = 20_000
+        private const val MAX_DOWNLOAD_SIZE = 10 * 1024 * 1024
+
         private const val STATE_SETTINGS_LIST_VISIBLE = "settingsListVisible"
         private const val STATE_SETTINGS_LIST_ENABLED = "settingsListEnabled"
         private const val STATE_IMPORT_BUTTON = "importButton"
@@ -589,6 +680,7 @@ sealed class Action {
     object PickDocument : Action()
     object ScanQrCode : Action()
     object PickApp : Action()
+    class FilePassphrasePrompt(val isRetry: Boolean) : Action()
     class StartAuthorization(val accountUuid: String) : Action()
     class PasswordPrompt(
         val accountUuid: String,

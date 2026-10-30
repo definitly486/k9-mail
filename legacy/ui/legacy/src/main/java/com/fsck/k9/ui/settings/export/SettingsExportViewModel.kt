@@ -31,6 +31,7 @@ class SettingsExportViewModel(
     private var accountsMap: Map<AccountNumber, AccountUuid> = emptyMap()
     private var savedSelection: SavedListItemSelection? = null
     private var contentUri: Uri? = null
+    private var passphrase: String? = null
 
     private val includeGeneralSettings: Boolean
         get() {
@@ -104,6 +105,12 @@ class SettingsExportViewModel(
     }
 
     fun onExportButtonClicked() {
+        sendActionEvent(Action.AskPassphrase)
+    }
+
+    fun onPassphraseEntered(passphrase: String) {
+        this.passphrase = passphrase
+
         updateUiModel {
             disableExportButton()
         }
@@ -129,6 +136,15 @@ class SettingsExportViewModel(
 
         val includeGeneralSettings = this.includeGeneralSettings
         val selectedAccounts = this.selectedAccounts
+        val passphrase = this.passphrase
+
+        if (passphrase.isNullOrEmpty()) {
+            // Never write a file containing passwords without encryption
+            updateUiModel {
+                showFailureText()
+            }
+            return
+        }
 
         viewModelScope.launch {
             try {
@@ -139,6 +155,7 @@ class SettingsExportViewModel(
                             selectedAccounts,
                             contentUri,
                             includePasswords = true,
+                            passphrase = passphrase,
                         )
                     }
                 }
@@ -146,6 +163,8 @@ class SettingsExportViewModel(
                 if (elapsed < MIN_PROGRESS_DURATION) {
                     delay(MIN_PROGRESS_DURATION - elapsed)
                 }
+
+                this@SettingsExportViewModel.passphrase = null
 
                 updateUiModel {
                     showSuccessText()
@@ -212,6 +231,7 @@ class SettingsExportViewModel(
 }
 
 sealed class Action {
+    object AskPassphrase : Action()
     class PickDocument(val fileNameSuggestion: String, val mimeType: String) : Action()
     class ShareDocument(val contentUri: Uri, val mimeType: String) : Action()
 }

@@ -35,10 +35,17 @@ class SettingsExporter(
         accountUuids: Set<String>,
         uri: Uri,
         includePasswords: Boolean = false,
+        passphrase: String? = null,
     ) {
         try {
             contentResolver.openOutputStream(uri, "wt")!!.use { outputStream ->
-                exportPreferences(outputStream, includeGlobals, accountUuids, includePasswords)
+                if (passphrase.isNullOrEmpty()) {
+                    exportPreferences(outputStream, includeGlobals, accountUuids, includePasswords)
+                } else {
+                    val buffer = java.io.ByteArrayOutputStream()
+                    exportPreferences(buffer, includeGlobals, accountUuids, includePasswords)
+                    outputStream.write(SettingsCrypto.encrypt(buffer.toByteArray(), passphrase))
+                }
             }
         } catch (e: Exception) {
             throw SettingsImportExportException(e)

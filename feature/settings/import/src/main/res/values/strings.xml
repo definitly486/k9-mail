@@ -5,6 +5,11 @@
     <string name="settings_import_scan_qr_code_button">Scan QR code</string>
     <string name="settings_import_pick_app_button">Import from app</string>
     <string name="settings_import_pick_app_dialog_title">Import from app</string>
+    <string name="settings_import_download_title">Download settings from link</string>
+    <string name="settings_import_passphrase_title">Encrypted settings file</string>
+    <string name="settings_import_passphrase_message">Enter the passphrase to decrypt the settings file.</string>
+    <string name="settings_import_passphrase_wrong">Wrong passphrase or damaged file. Try again.</string>
+    <string name="settings_import_passphrase_hint">Passphrase</string>
     <string name="settings_import_button">Import</string>
     <string name="settings_import_success_generic">Settings successfully imported</string>
     <!-- Displayed after importing accounts when one or multiple accounts require entering a password -->
